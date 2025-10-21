@@ -25,7 +25,7 @@ Moreover, thanks to the context-based representation, it is possible to introduc
 
 # Installation 
 
-The pip install possibility will hopefully be available soon. 
+The pip install possibility will hopefully be available soon. Meanwhile, please use the GitHub repository and its `requirement.txt` file in order to use this module. 
 
 ```default
 pip install pwp-bench
