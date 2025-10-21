@@ -27,7 +27,7 @@ Moreover, thanks to the context-based representation, it is possible to introduc
 
 
 ```default
-pip install pwp-bench
+pip install pwp_bench
 ```
 
 # Problem Statement {#pb-statement}
