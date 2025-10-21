@@ -1,0 +1,338 @@
+---
+title: "pwpBench"
+subtitle: "A python module to generate benchmark datasets for anomaly detection in context-dependent industrial relationships."
+author: 
+    - name: "Mazen Alamir"
+      affiliation:  "CNRS, University of Grenoble Alpes"
+      homepage: "https://www.mazenalamir.fr"
+date: October 25, 2025
+keywords: ["anomaly detection", "Multivariate Polynomial", "Identification of Invariants", "Python"]
+---
+
+---
+`pwpBench` is a python package that helps generating flexibly-defined datasets representing **context-dependent** industrial-like multivariate polynomial relationships. The dataset can be used in the validation and the evaluation of anomaly detection algorithms in Machine Learning. 
+
+
+::: {.callout-tip}
+# Creating instances of parametric anomalies.
+
+While anomalies can be introduced using standard drift or relative bias, the `pwpBench`, beside the creation of context dependent relationships, enables, through one of its exported methods, to create **parameteric-like anomalies** that represent bias affecting the coefficients of the underlying relationships.
+
+Such process makes the anomaly detection benchmark closer to the industrial case where the anomalies are, at least very frequently, induced by shifts in the physical parameters of the equipment.
+
+Moreover, thanks to the context-based representation, it is possible to introduce anomalies that appears only in a specific context.
+:::
+
+# Installation 
+```default
+pip install pwp-bench
+```
+
+# Problem Statement {#pb-statement}
+
+Our objective is to define a context-dependent nonlinear relationship of the form:
+
+$$
+y = f_i(x) \quad \text{if}\quad g(x)\in [\ell_i, u_i)\quad i\in \{1,\dots,n_r\}
+$${#eq-defdey}
+
+where the intervals $[\ell_i, u_i)$ define a partition of the set of possible values of the so-called context variable $z=g(x)\in \mathbb R$ when the features vector $x$ spans the hypercube $[x_\text{min}, x_\text{max}]\subset \mathbb R^{n_x}$.
+
+The dimension of the features variable $x$ can be chosen by the user as well as the number of regions $n_r\in \mathbb N$ involved in the piece-wise degined relationship @eq-defdey. 
+
+The `pwpBench` module uses multi-variate polynomial to define all the maps invoved in @eq-defdey, namely $f_i$ for $i=1,\dots,n_r$ and $g$ defining the context indicator $z$. Therefore, let us first of all precisely define what is a multivariate polynomial relationship.
+
+# Multi-variate polynomials {#sec-polynomial}
+A multi-variate polynomial  $P(x)$  in the vector of arguments $x\in \mathbb R^n$ takes the following form:
+
+$$
+P(x)=\sum_{i=1}^{n_c}c_i \phi_i(x)\quad \text{where}\quad \phi_i(x)=\prod_{j=1}^{n}x_j^{p_{ij}}
+$${#eq-defdeP}
+
+Notice that $n_c$ is the number of multi-variate monomials involved in the definition of the polynomial $P(x)$  and $c_i$ is the weight of the $i$-th monomial.
+    
+
+::: {.callout-tip}
+# Arguments of definition of a multivariate polynomial
+Based on the above definition of $P(x)$, it comes out that a polynomial is defined by two arguments: 
+
+1. **The matrix of powers** 
+    $$\texttt{powers}=\Bigl[p_{ij}\Bigr]_{(i,j)\in \{1,\dots,n_c\}\times \{1,\dots,n\}} \in \mathbb R^{n_c\times n}$$
+
+2. **The vector of coefficients** $$c\in \mathbb R^{n_c}$$
+:::
+
+The `pwpBench` module extensively uses this definition in order to build the piece-wise polynomial relationship as well as the boundaries of the domains that define the context. 
+
+## Instantiation of a polynomial {#declaration}
+
+Declaring a multivariate polynomial is done by creating an instance of the class `Pol`that is defined in the `optipoly` module[^1]. For instance, consider the following polynomial in three variables:
+
+$$
+P(x) = x_1x_3^2+2x_2^3
+$${#eq-examplePx}
+
+An instance of the class `Pol` that represents this polynomial can be created via the following script:
+
+```python 
+from optipoly import Pol
+
+# Define the matrix of powers and c.
+ 
+powers = [[1, 0, 2], [0,3,0]] 
+coefs = [1.0, 2.0]            
+
+# Create an instance of the class.
+
+pol = Pol(powers, coefs)      
+```
+
+## Evaluation of the polynomial {#evaluation}
+
+The following script computes the values of the polynomial at the arguments defined by the lines of the following matrix $X$:
+
+$$X:= \begin{bmatrix} 
+1&1&1\cr -1&2&3\cr 0&1&0
+\end{bmatrix}$$
+which means that the polynomial is evaluated at the arguments:
+$$\begin{bmatrix} 
+1\cr 1\cr 1
+\end{bmatrix}\ ,\  \begin{bmatrix} 
+-1\cr 2\cr 3
+\end{bmatrix}\ ,\  \begin{bmatrix} 
+0\cr 1\cr 0
+\end{bmatrix}$$
+
+```python 
+X = [[1,1,1], [-1,2,3], [0,1,0]]
+pol.eval(X)
+
+>> array([3., 7., 2.])
+```
+
+With the previous reminder, we are now ready to discuss the main (and sole!) class of the `pwpBench` class, namely the `Problem` class.
+
+# The `Problem` class {#problem-class}
+
+Let us successively present the instantiation function, the attributes and the methods exported by the `Problem` class of the `pwpBench` module 
+
+## Instantiation arguments {#sec-instantiation}
+The table below describes the input arguments used to create an instance of the `Problem` class.
+
+:::{.tbl-caption}
+| **Parameter**     | **Description**      | **Default**|
+|---|---------------|----:|
+| `nx` | The number of features. | --|
+| `rho`| The size of the hyper-cube of the features domain. | -- |
+| `degrees`| The vector of degrees of the polynomials for the different contexts. Notice that the length of this variable determines the number of different contexts present in the data. | -- |
+| `nModes_max`| The maximum number of monomials[^3] involved in the polynomial relationship in any sub-domain. The effectively used number of monomials is then generated randomly to be lower or equal to this parameter. | -- |
+| `deg_boundary`| The degree of the multivariate polynomial that defines the boundary function $g$ used in @eq-defdey. | -- |
+| `nModes_boundary_max`| The upper bound on the maximum number of monomials used in the polynomial `g` used in @eq-defdey. | -- |
+
+
+Table: Arguments used in the creation of an instance of the `Problem` class.
+:::
+
+Once these parameters are provided to the `__init__` instantiation function, corresponding attributes are created for the insance of the class `Problem` which are listed below: 
+
+## Instances-related attributes {#sec-attributes}
+
+The following list of attributes are created for an instance of the class `Problem`:
+
+:::{.tbl-caption}
+| **Parameter**     | **Description**      | **Default**|
+|---|---------------|----:|
+| `nx`| The number of features. | --|
+| `xmin`| Vector of lower bounds for $x$ as defined by `rho`. | --|
+| `xmax`| Vector of upper bounds for $x$ as defined by `rho`. | --|
+| `zmin`| Vector of lower bounds for $g$. This value is computed using the `solve` method of the `optipoly` module.| --|
+| `zmax`| Vector of upper bounds for $g$. This value is computed using the `solve` method of the `optipoly` module.| --|
+| `zdiv`| The values that define the  boundaries of the different context-related regions. More precisely, the first interval is defined by $(-\infty,\texttt{zdiv[0]})$, the second inteval is $(\texttt{zdiv[0], zdiv[1]})$ and so on while the last interal is defined by $(\texttt{zdiv[-1]}, +\infty)$| --|
+| `qz`| A function such that `qz(g(x))` provides the index of the region to which belongs the  features vector $x$. | --|
+| `pols`| The list of polynomials of the different regions. Each member of the list is an instance of the class `Pol` mentioned above. For instance, to access to the matrix of power of the polynomials that holds in the region of index $i$, the variable `pols[i].powers` should be used. The same holds for the vector of coefficients of the same polynomial, namely `pols[i].coefs`| --|
+| `nSubModels`| The number of context dependent regions. This is simply the length of the vector of `degrees` provided in the instantiation call (see @sec-polynomial).| --|
+| `deg_boundary`| The degree of the polynomial $g$ defining the boundary of the contexts regions. | --|
+
+
+Table: Attributes of an instance of the `Problem` class.
+:::
+
+## Exported Methods {#sec-methods}
+
+In this section, the methods exported by the class `Problem` are listed and described. There are three useful methods exported by the class `Problem`: 
+
+### 1) The `generate_data` method {#sec-generate_data}
+
+This method generates the triplet `(X,y,idz)` representing respectively, the features matrix, the label vecor and the index of the context. The resulting dataset can then be used to create detuned version that corresponds to the user's will. 
+
+This method takes the following input arguments: 
+
+**INPUT ARGUMENTS for the `generate_data` method**
+
+- `nSamples`: the number of samples to be generated.
+- `stratified`: a boolean to ask for a stratified version of the data or not.
+- `cv`: the number of inner sub-intervals to create from a given context subset of data
+- `plot`: a boolean to ask for a plotting of the dataset or not.
+
+**RETURNED RESULT from the `generate_data` method**
+
+- `X`: the Features matrix.
+- `y`: the label vector. 
+- `idz`: the context indicator.
+- `fig`: the `plotly` fig if `plot`is set to true. This plot shows the evolution of the label `y`vs the sample number. 
+
+### 2) The `plot_regions` method {#sec-plot_regions}
+
+This method produces a 2D context-shaded representation of the data in order to examine the shape of the boundaries between context-determines regions in the dataset (see the example below). 
+
+This method is mainly used as an illustrative option. 
+
+**INPUT ARGUMENTS for the `plot_regions` method**
+
+- `X`: the features matrix produced by `generate_data` method (see above).
+- `idz`: The context label as returned by the `generate_data` method (see above).
+- `col1`, `col2`: The two columns for the 2D representation.
+
+
+**RETURNED RESULT from the `plot_regions` method**
+
+A plotly figure showing the 2S colored regions in the coordinates defined by the input arguments `col1` and `col2`. 
+
+### 3) The `create_working_dataframe` method {#sec-create_working_df}
+
+This method takes a features matrix $X$ (that can be created through the `generate_data` method for instance and hence potentially stratified) and introduce parameteric anomaly that cover a part of the dataframe that is determined by the `test_size` input arguments. More precisely: 
+
+
+**INPUT ARGUMENTS for the `create_working_dataframe` method**
+
+- `X`           : The matrix of features.
+- `i_anomaly`   : The index of context to be detuned. 
+- `rel_bias`    : The standard deviation (relative to nominal) of the bias on the parameters 
+                of the polynomials at the context indexed by `i_anomaly`.
+- `test_size`   : The portion of the detuned second part of the dataset. 
+
+**RETURNED RESULY from the `create_working_dataframe` method**
+
+- `df`          : A dataframe containing nominal and detuned part (features, label, context)
+- `res`         : The residual profile should the relationship be perfectly known. Namely the absolute error between the detuned label and the label that would be prediced by the exact polynomial relationships.
+
+The following schematic show the flow of use of the exported methods. 
+
+![](images/overview_pwpBench.png)
+
+# Example {#sec-example}
+
+## Generating and visualizing data 
+
+Let us see how context-dependent data can be created and visualized. Here we use `nx=2` for the sake of getting interesting visualization of the different context-dependent regions.
+
+```python 
+from pwpBench import Problem
+from pwpBench import plot_regions
+
+# Define the argument of call for the instance creation
+
+args = {
+    'nx' : 2,
+    'rho' : 1.5,
+    'degrees' : [1, 2, 3, 3],
+    'nModes_max' : 5,
+    'deg_boundary' : 2,
+    'nModes_boundary_max' : 10
+}
+
+# Create the instance 
+
+pb = Problem(**args)
+
+# call the instance generate_data method
+
+X, y, idz, fig = pb.generate_data(nSamples=50000, 
+                    stratified=True, cv=4, plot=True)
+
+# show the plots if any 
+if fig:
+    fig.show()
+
+fig_regions = plot_regions(X, idz, 0,1)
+fig_regions.show()
+```
+
+This script prodcues the following results[^2]: 
+
+![](images/fig.png)
+![](images/fig_regions.png)
+
+Other possibilities that might be obtained using repetitive execution of the previous script:
+
+![](images/others.png)
+
+## Context-dependent parametric anomalies
+
+This script shows an example of generating first a triplet (`X`, `y`, `idz`) using the `generate_data` method from which the feautres matrix `X`is then used to define the detuned working dataset involving a nominal part followed by a detuned part. 
+
+```python
+import numpy as np
+import pandas as pd 
+from copy import deepcopy
+from optipoly import Pol 
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go 
+
+args = {
+    'nx' : 2,
+    'rho' : 1.5,
+    'degrees' : [1, 2, 3, 3],
+    'nModes_max' : 5,
+    'deg_boundary' : 2,
+    'nModes_boundary_max' : 10
+}
+
+pb = Problem(**args)
+
+X, y, idz, fig = pb.generate_data(nSamples=10000, stratified=True, cv=4, plot=True)
+
+
+i_anomaly=2
+df_nominal, _ = pb.create_working_dataframe(X, i_anomaly=i_anomaly, rel_bias=0)
+df_detuned, res = pb.create_working_dataframe(X, i_anomaly=i_anomaly, rel_bias=0.4)
+
+xs = np.array([i for i in range(len(df_nominal))])
+fig = make_subplots(rows=3, cols=1, x_title='Sample Index', shared_xaxes=True)
+
+fig.add_trace(go.Scatter(x=xs, y=df_nominal.idz, name='Context indicator'), row=1, col=1)
+fig.add_trace(go.Scatter(x=xs, y=df_detuned.y, name='y_detuned'), row=2, col=1)
+fig.add_trace(go.Scatter(x=xs, y=df_nominal.y, name='y_nominal'), row=2, col=1)
+fig.add_trace(go.Scatter(x=xs, y=res, name='residual on detuned'), row=3, col=1)
+fig.update_layout(
+    title='Introducing parameteric anomalies',
+    width=600,
+    height=600
+)
+```
+
+![](images/final_use.png)
+
+Notice how the context number 2 is detuned in the second half (`test_size=0.5`) of the data while kept intact in the first part. This represent a context-related detuned data that might simulate an anomaly that is apparent only in the context 1 of operation. Think about a default in the braking system of an automotive which becomes apparent only when the driver is braking.
+
+# Citing pwpBench {#citing}
+
+The complete details of the publication will be updated as soon as possible. 
+
+```bibtex
+@misc{pwpBench2025,
+      title={pwpBench: A Python package for the creation of benchmarks problems for anomaly detection in multi-context industrial data.}, 
+      author={Mazen Alamir},
+      year={2025},
+      eprint={xxx},
+      archivePrefix={arXiv},
+      primaryClass={eess.SY},
+      url={http://arxiv.org/abs/xxx}, 
+}
+```
+
+[^1]: see the documentation [here](https://mazenalamir.github.io/optipoly/).
+
+[^2]: Remember that the generation process involves random steps so that it is unlikely that you get the same data and figures. 
+
+[^3]: This is precisely the parameter $n_c$ used in @eq-defdey.

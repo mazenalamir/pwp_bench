@@ -1,0 +1,33 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "pwBench"
+  navbar:
+    pinned: true
+    left:
+      - href: index.qmd#pb-statement
+        text: Problem statement 
+      - href: index.qmd#sec-polynomial
+        text: "MV_polynomials"
+      - href: index.qmd#problem-class
+        text: "Problem-Class"
+      - href: index.qmd#sec-example
+        text: "Example"
+      - href: index.qmd#citing
+        text: "Cite pwBench"
+        
+
+# flatly, sketchy, pulse, sandstone, spacelab
+# superhero, united, yeti
+format:
+  html:
+    theme: flatly
+    css: styles.css
+    toc: true
+    toc-location: 'left'
+    self-contained: true
+
+
+

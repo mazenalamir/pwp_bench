@@ -1,0 +1,18 @@
+/* css styles */
+/* Applies a light gray background to all table cells */
+
+
+table {
+    background-color: #fafcfc;  /* Light gray background */
+    border-collapse: collapse;  /* Removes gaps between borders */
+    width: 100%;
+}
+
+table th, table td {
+    padding: 8px;              /* Adds padding for readability */
+    border: 1px solid #f3eded;    /* Adds a border for better visibility */
+}
+
+table tr:nth-child(even) {
+    background-color: #f2f4f8; /* Alternating row color for clarity */
+}
