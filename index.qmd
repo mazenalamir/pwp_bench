@@ -229,8 +229,8 @@ The following schematic show the flow of use of the exported methods.
 Let us see how context-dependent data can be created and visualized. Here we use `nx=2` for the sake of getting interesting visualization of the different context-dependent regions.
 
 ```python 
-from pwp-bench import Problem
-from pwp-bench import plot_regions
+from pwp_bench import Problem
+from pwp_bench import plot_regions
 
 # Define the argument of call for the instance creation
 
