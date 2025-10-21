@@ -24,6 +24,9 @@ Moreover, thanks to the context-based representation, it is possible to introduc
 :::
 
 # Installation 
+
+The pip install possibility will hopefully be available soon. 
+
 ```default
 pip install pwp-bench
 ```
